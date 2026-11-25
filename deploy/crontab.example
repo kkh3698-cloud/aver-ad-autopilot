@@ -1,0 +1,5 @@
+# crontab -e 로 등록. 경로는 본인 환경에 맞게 수정.
+# 매일 09:10, 18:10 — 순위 측정 + 동기화 + 교체 완료 처리 + 인기 콘텐츠 수집 + 소재 제안 + 리포트
+10 9,18 * * *  cd /opt/naver-growth-autopilot && /usr/bin/python3 -m naver_growth run >> data/cron.log 2>&1
+# 5분마다 — 텔레그램 [승인]/[거절] 버튼 응답 처리 → 승인된 소재 즉시 생성
+*/5 * * * *    cd /opt/naver-growth-autopilot && /usr/bin/python3 -m naver_growth check-approvals >> data/cron.log 2>&1

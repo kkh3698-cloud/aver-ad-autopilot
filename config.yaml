@@ -1,0 +1,106 @@
+# 가게 정보 설정. API 키는 여기 넣지 마세요 (GitHub > Settings > Secrets 에만).
+# "← 수정" 표시된 곳만 바꾸면 됩니다.
+
+business:
+  name: "OO헤어 강남역점"          # ← 수정: 네이버 플레이스에 등록된 업체명 그대로
+  short_name: "OO헤어"            # ← 수정
+  area: "강남역"                  # ← 수정
+  match_address: "강남대로"        # 같은 이름 지점이 여러 개면 주소 일부로 구분
+  place_id: "1234567890"           # 플레이스 URL 의 숫자 (browser 모드에서 사용)
+  landing_url: "https://m.place.naver.com/hairshop/1234567890"   # ← 수정: 광고 클릭 시 열릴 주소
+  mobile_landing_url: ""           # 비우면 landing_url 사용
+  value_per_conversion: 40000      # 전환 1건 평균 가치(원). 리포트의 추정 ROAS 계산용
+
+place_tracking:
+  provider: official               # official(공식 API, 상위 5개만) | browser(화면 순위, 약관 리스크)
+  keywords:
+    - "강남역 미용실"
+    - "강남 커트"
+    - "강남역 펌"
+  alert_drop: 3                    # 이만큼 떨어지면 알림
+  browser:
+    url_template: "https://m.place.naver.com/place/list?query={query}"   # 화면 구조 바뀌면 수정
+    max_items: 50
+    delay_sec: [4, 9]
+    ad_marker: "광고"
+
+ads:
+  dry_run: true                    # true: 승인해도 실제 생성/중지 안 하고 로그만. 확인 후 false
+  managed_adgroups: auto           # auto: 계정에서 켜져 있는 파워링크 광고그룹 전부 (플레이스·쇼핑 광고 제외)
+  # 특정 그룹만 관리하려면:
+  # managed_adgroups:
+  #   - { id: "grp-xxxx", name: "커트" }
+
+  creative:
+    lookback_days: 14
+    min_active_ads: 2              # 이 수 밑으로는 절대 중지하지 않음
+    max_active_ads: 4              # 활성+검수대기 소재 목표 수
+    min_impressions: 1000          # 이 노출 미만 소재는 판정 보류
+    min_conversions_for_cvr: 20    # 그룹 전환이 이 이상이면 '노출당 전환'으로 판정, 아니면 CTR
+    lose_threshold: 0.05           # '최고일 확률' 5% 미만이면 패자 → 교체 제안
+    min_age_days: 5                # 등록 후 이 기간 지나야 교체 대상
+    headline_max: 15               # 네이버 텍스트 소재 제목 글자 수
+    description_max: 45            # 설명 글자 수
+
+  bidding:
+    enabled: false                 # 소재 전용 모드: 입찰은 어떤 경로로도 바꾸지 않음 (API 클라이언트에서도 차단)
+    # 아래는 enabled: true 로 바꿀 때만 사용
+    lookback_days: 7
+    target_cpa: 15000
+    target_rank: 3
+    max_step_pct: 15
+    min_bid: 70
+    max_bid: 3000
+    min_clicks: 20
+    cooldown_days: 3
+
+  guardrails:
+    max_changes_per_run: 10
+    max_changes_per_day: 30
+    kill_switch_file: "STOP"       # 이 파일을 만들면 모든 변경 중지 (touch STOP)
+
+approvals:
+  channel: github                  # github: 이슈에 👍/👎 로 승인 (무료, 서버 불필요) | telegram | cli
+  github_users: []                 # 비우면 저장소 주인만 승인 가능
+  max_open_per_adgroup: 2          # 광고그룹당 동시에 올라가 있는 제안 수 상한 (알림 폭탄 방지)
+  expire_days: 7                   # 응답 없으면 만료
+  telegram_user_ids: []            # channel: telegram 일 때만. 승인 권한자 텔레그램 숫자 ID
+
+inspiration:
+  refresh_days: 7                  # 이 주기로 업계 인기 콘텐츠를 새로 수집
+  queries:                         # 업계 검색어 (우리 업체명 말고 '손님이 찾는 말')
+    - "강남 미용실 후기"
+    - "남자 커트 추천"
+    - "펌 잘하는 미용실"
+    - "곱슬 매직 후기"
+  top_k: 12                        # 문구 생성에 참고할 콘텐츠 수
+  per_source: 6                    # 소스별 최대 (한 소스만 쏠리지 않게)
+  max_copied_chars: 10             # 참고 원문과 공백 제외 이만큼 연속 같으면 탈락 (베끼기 방지)
+  competitor_names: []             # 문구에 쓰면 안 되는 경쟁사명 (순위 추적 상위 업체는 자동 추가)
+  sources:
+    youtube:    { enabled: true, per_query: 25, days: 60, shorts_only: false }   # YOUTUBE_API_KEY 없으면 자동 건너뜀
+    naver_blog: { enabled: true, per_query: 30 }                                 # 지역검색과 같은 네이버 키
+    manual:     { enabled: true, path: inspiration }                             # inspiration/*.csv
+
+copygen:
+  provider: auto                   # auto: ANTHROPIC_API_KEY 있으면 Claude(유료, 소액), 없으면 무료 템플릿
+  model: claude-opus-5-5
+  brand_notes: |
+    - 강남역 2번 출구 도보 1분
+    - 평일 21시까지 영업, 네이버 예약 가능
+    - 디자이너 1:1 상담 후 시술
+    (여기 적은 사실만 광고 문구에 쓰입니다. 가격·수상 경력 등은 사실일 때만 추가)
+  banned_words: ["최고", "최저", "1위", "유일", "최초", "100%", "보장", "완벽", "무조건"]
+  templates:                       # Claude 미사용/실패 시 예비 문구
+    - { headline: "{area} {biz}", description: "디자이너 1:1 상담 후 시술. 네이버 예약으로 대기 없이 방문하세요.", hypothesis: "업체명 강조" }
+    - { headline: "{area} 퇴근 후 미용실", description: "평일 밤 9시까지 영업. 퇴근길에 예약하고 바로 시술받으세요.", hypothesis: "영업시간(편의성) 강조" }
+    - { headline: "{area} 1분 헤어샵", description: "역에서 도보 1분. 상담부터 시술까지 한 디자이너가 맡습니다.", hypothesis: "접근성 강조" }
+    - { headline: "{biz} 네이버 예약", description: "원하는 시간 골라 예약하세요. {area} 2번 출구 바로 앞입니다.", hypothesis: "예약 행동 유도" }
+
+notify:
+  # 비밀값은 .env 의 SLACK_WEBHOOK_URL / TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
+
+storage:
+  db_path: data/autopilot.db
+  plans_dir: data/plans
+  reports_dir: data/reports

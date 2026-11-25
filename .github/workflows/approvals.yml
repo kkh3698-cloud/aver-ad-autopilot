@@ -1,0 +1,56 @@
+# 승인 요청 이슈에 👍/👎 를 누르거나 댓글을 달면 바로(보통 1~3분) 처리합니다.
+# 👍 반응만 누른 경우는 GitHub 가 이벤트를 보내지 않아서, 1시간마다 한 번씩 확인합니다.
+# (바로 반영되길 원하면 👍 대신 '승인' 댓글을 다세요)
+# 무료 한도: 비공개 저장소 월 2,000분 — 이 설정으로 월 약 800~900분 사용 예상
+name: 승인 처리
+on:
+  issue_comment: { types: [created] }
+  issues: { types: [closed] }
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: autopilot
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # 이벤트로 깨어난 경우 '소재제안' 이슈일 때만 실행
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, '소재제안')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: autopilot-data, path: data }
+      - name: 대기 중인 승인 요청이 있을 때만 처리
+        id: pending
+        run: python3 -c "import sqlite3,os,sys; p='data/autopilot.db'; n=sqlite3.connect(p).execute(\"select count(*) from proposals where status in ('pending','approved')\").fetchone()[0] if os.path.exists(p) else 0; print('n=%d'%n); open(os.environ['GITHUB_OUTPUT'],'a').write('n=%d\n'%n)"
+      - if: steps.pending.outputs.n != '0'
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - if: steps.pending.outputs.n != '0'
+        run: pip install -r requirements.txt
+      - if: steps.pending.outputs.n != '0'
+        run: python -m naver_growth check-approvals
+        env:
+          NAVER_AD_API_KEY: ${{ secrets.NAVER_AD_API_KEY }}
+          NAVER_AD_SECRET_KEY: ${{ secrets.NAVER_AD_SECRET_KEY }}
+          NAVER_AD_CUSTOMER_ID: ${{ secrets.NAVER_AD_CUSTOMER_ID }}
+          NAVER_OPENAPI_CLIENT_ID: ${{ secrets.NAVER_OPENAPI_CLIENT_ID }}
+          NAVER_OPENAPI_CLIENT_SECRET: ${{ secrets.NAVER_OPENAPI_CLIENT_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 실행 기록 저장
+        if: steps.pending.outputs.n != '0'
+        working-directory: data
+        run: |
+          git config user.name "autopilot-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -qm "approvals $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q origin HEAD:autopilot-data

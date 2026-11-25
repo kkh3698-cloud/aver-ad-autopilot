@@ -1,0 +1,5 @@
+requests>=2.31
+PyYAML>=6.0
+anthropic>=2.0        # copygen.provider: claude 일 때만 필요
+# playwright>=1.45    # place_tracking.provider: browser 일 때만 필요
+pytest>=8             # 테스트용

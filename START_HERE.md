@@ -1,0 +1,89 @@
+# 사장님 할 일 (처음 한 번, 약 40분)
+
+설치할 프로그램은 없습니다. **휴대폰이나 PC의 웹브라우저만 있으면 됩니다.**
+모든 작업은 GitHub(무료)가 대신 돌려줍니다. 사장님 컴퓨터가 꺼져 있어도 됩니다.
+
+---
+
+## ① 키 받기 (약 20분)
+
+| # | 무엇 | 어디서 | 받을 것 |
+|---|---|---|---|
+| 1 | 네이버 검색광고 API | [searchad.naver.com](https://searchad.naver.com) 로그인 → 상단 **도구** → **API 사용 관리** → 발급 | API 키 · 비밀키 · CUSTOMER_ID (3개) |
+| 2 | 네이버 개발자 키 | [developers.naver.com](https://developers.naver.com) → **Application → 애플리케이션 등록** → 사용 API에서 **검색** 선택 | Client ID · Client Secret (2개) |
+| 3 | (선택) 유튜브 키 — 무료 | [console.cloud.google.com](https://console.cloud.google.com) → 프로젝트 생성 → **YouTube Data API v3** 사용 → 사용자 인증 정보 → API 키 | API 키 (1개) |
+| 4 | (선택) Claude 키 — **유료** | [console.anthropic.com](https://console.anthropic.com) → API Keys | API 키 (1개) |
+
+> 3, 4번은 없어도 됩니다. 4번이 없으면 **무료 기본 문구**로 제안합니다.
+> 4번을 넣으면 인기 콘텐츠를 분석한 더 좋은 문구가 나오고, **사용한 만큼 소액이 청구됩니다**
+> (제안이 필요할 때만 호출. 정확한 금액은 사용량에 따라 다르니 Anthropic 콘솔에서 월 한도를 걸어두세요).
+
+⚠️ 받은 키는 **채팅·카톡·메일에 붙여넣지 마세요.** 아래 ③에서 GitHub에만 넣습니다.
+
+## ② 저장소에 키 넣기 (약 10분)
+
+저장소 페이지 → **Settings** → 왼쪽 **Secrets and variables** → **Actions** → **New repository secret**
+아래 이름 그대로 하나씩 추가합니다. (이름은 복사해서 붙여넣으세요)
+
+| Name | Secret (값) |
+|---|---|
+| `NAVER_AD_API_KEY` | ①-1 API 키 |
+| `NAVER_AD_SECRET_KEY` | ①-1 비밀키 |
+| `NAVER_AD_CUSTOMER_ID` | ①-1 CUSTOMER_ID (숫자) |
+| `NAVER_OPENAPI_CLIENT_ID` | ①-2 Client ID |
+| `NAVER_OPENAPI_CLIENT_SECRET` | ①-2 Client Secret |
+| `YOUTUBE_API_KEY` | ①-3 (선택) |
+| `ANTHROPIC_API_KEY` | ①-4 (선택) |
+
+## ③ 첫 실행 (1분)
+
+저장소 → **Actions** 탭 → (처음이면 "I understand… enable" 버튼) → 왼쪽 **정기 실행** → **Run workflow** → 초록 버튼
+
+2~3분 뒤 **Issues** 탭에 **📊 광고·순위 대시보드** 가 생깁니다.
+맨 위에 "🔧 설정 확인 필요"가 있으면 거기 적힌 것만 해결하면 됩니다.
+
+## ④ 휴대폰 알림 켜기 (2분)
+
+1. 휴대폰에 **GitHub** 앱 설치 → 로그인
+2. 앱 → 프로필 → Settings → Notifications → **Push notifications 켜기**
+3. 저장소 페이지에서 **Watch → All Activity** (보통 이미 켜져 있음)
+
+---
+
+# 매일 쓰는 법 (하루 1~2분)
+
+새 소재 제안이 생기면 GitHub 앱으로 **알림**이 옵니다. 열어서:
+
+| 하고 싶은 것 | 방법 |
+|---|---|
+| **승인** | 이슈에 **👍** 누르기, 또는 댓글 `승인` |
+| **거절** | **👎** 누르기, 또는 댓글 `거절`, 또는 이슈 닫기 |
+| 현황 보기 | Issues 탭의 **📊 대시보드** (하루 2번 자동 갱신) |
+
+- 댓글로 `승인`을 쓰면 **1~3분 안에** 반영됩니다. 👍만 누르면 **1시간 안에** 반영됩니다.
+- 승인하면 새 광고가 네이버에 올라가고, **네이버 검수가 끝난 뒤** 성과 나쁜 기존 광고가 꺼집니다. 진행 상황은 같은 이슈에 댓글로 남습니다.
+- 응답 안 하면 7일 뒤 자동으로 사라집니다. **입찰가는 절대 안 바꿉니다.**
+
+---
+
+# 연습 → 실제로 바꾸기
+
+처음엔 **연습 모드**입니다. 승인해도 실제 광고는 안 바뀝니다. 1~2주 제안을 받아보고 마음에 들면:
+
+저장소 → `config.yaml` 열기 → 연필(✏️) 버튼 → `dry_run: true` 를 `dry_run: false` 로 → **Commit changes**
+
+> 실제 모드 첫 승인은 **1건만** 해보고, 네이버 광고관리에서 새 소재가 잘 올라갔는지 확인해 주세요.
+> (네이버 실제 계정으로는 아직 시험해 보지 못한 부분입니다)
+
+# 급하게 멈추고 싶을 때
+
+- **방법 1**: Actions 탭 → **정기 실행** / **승인 처리** → 오른쪽 ⋯ → **Disable workflow**
+- **방법 2**: 저장소에서 **Add file → Create new file** → 이름에 `STOP` → Commit. 지우면 다시 동작합니다.
+
+# 비용
+
+| 항목 | 비용 |
+|---|---|
+| GitHub (비공개 저장소) | 무료 (월 2,000분 무료, 이 시스템은 월 약 800~900분 사용 예상) |
+| 네이버 API, 유튜브 API | 무료 |
+| Claude (선택) | 사용량만큼 유료 — 안 넣으면 0원 |

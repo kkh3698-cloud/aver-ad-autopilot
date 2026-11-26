@@ -245,3 +245,14 @@ def test_rsa_label_and_power_content_excluded(env):
     drop_unmanaged(cfg, db)
     assert db.proposal(pid)["status"] == "expired"
     assert all(db.proposal(i)["status"] == "pending" for i in ids)  # 정상 그룹 제안은 그대로
+
+
+def test_inspiration_relevance_filter():
+    import yaml
+    from naver_growth.inspiration import is_relevant
+    c = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))["inspiration"]
+    m, x = c["must_include_any"], c["exclude_words"]
+    assert is_relevant({"title": "헬스장 처음이라면? 이 순서대로만", "snippet": ""}, m, x)
+    assert is_relevant({"title": "PT 상담 갔는데 사장이 나를 거절함", "snippet": ""}, m, x)
+    assert not is_relevant({"title": "현대자동차 면접 전략 PT면접", "snippet": ""}, m, x)
+    assert not is_relevant({"title": "SK하이닉스 하프데이 면접 후기", "snippet": ""}, m, x)

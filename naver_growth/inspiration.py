@@ -172,23 +172,49 @@ def build_sources(cfg) -> list:
     return out
 
 
+def is_relevant(item: dict, must_any: list[str], exclude: list[str]) -> bool:
+    """업종과 무관한 콘텐츠 거르기 (예: 'PT'로 검색했는데 '면접 PT(발표)' 영상이 섞이는 경우)."""
+    text = f"{item.get('title', '')} {item.get('snippet', '')}".lower()
+    if any(w.lower() in text for w in exclude if w):
+        return False
+    return not must_any or any(w.lower() in text for w in must_any if w)
+
+
+def _settings_fingerprint(cfg) -> str:
+    import hashlib
+    import json as _json
+    keys = ["inspiration.queries", "inspiration.youtube_queries", "inspiration.must_include_any",
+            "inspiration.exclude_words", "inspiration.sources"]
+    blob = _json.dumps({k: cfg.get(k) for k in keys}, ensure_ascii=False, sort_keys=True)
+    blob += "|yt" if cfg.secrets.get("YOUTUBE_API_KEY") else ""
+    return hashlib.md5(blob.encode()).hexdigest()
+
+
 def collect(cfg, db, force: bool = False) -> tuple[int, list[str]]:
-    """refresh_days 가 지났거나 force 면 새로 수집. (수집 건수, 오류 메시지) 반환."""
+    """refresh_days 가 지났거나, 검색어·필터·키 설정이 바뀌었거나, force 면 새로 수집."""
     _, last = db.latest_inspiration_batch()
     refresh = cfg.get("inspiration.refresh_days", 7)
-    if last and not force and (datetime.now() - datetime.fromisoformat(last)).days < refresh:
+    fp = _settings_fingerprint(cfg)
+    changed = db.kv_get("insp_fingerprint") != fp
+    if last and not force and not changed and (datetime.now() - datetime.fromisoformat(last)).days < refresh:
         return 0, []
     queries = cfg.get("inspiration.queries", []) or []
+    yt_queries = cfg.get("inspiration.youtube_queries") or queries
     batch = datetime.now().strftime("insp-%Y%m%d-%H%M%S")
     items, errors = [], []
     try:
         sources = build_sources(cfg)
     except Exception as e:
         return 0, [f"소스 설정 오류: {e}"]
+    must_any = cfg.get("inspiration.must_include_any", []) or []
+    exclude = cfg.get("inspiration.exclude_words", []) or []
     for src in sources:
         try:
-            got = src.collect(queries)
-            items += got
+            got = src.collect(yt_queries if src.name == "youtube" else queries)
+            kept = [i for i in got if i.get("source") == "manual" or is_relevant(i, must_any, exclude)]
+            if len(kept) < len(got):
+                errors.append(f"{src.name}: 업종과 무관한 {len(got) - len(kept)}건 제외")
+            items += _percentile(kept)  # 거른 뒤 다시 순위 매김
         except Exception as e:  # 한 소스 실패가 전체를 막지 않게
             errors.append(f"{src.name}: {e}")
     for it in items:
@@ -196,4 +222,5 @@ def collect(cfg, db, force: bool = False) -> tuple[int, list[str]]:
             it.pop(k)
     if items:
         db.add_inspirations(batch, items)
+        db.kv_set("insp_fingerprint", fp)
     return len(items), errors

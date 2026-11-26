@@ -10,11 +10,11 @@
 | # | 무엇 | 어디서 | 받을 것 |
 |---|---|---|---|
 | 1 | 네이버 검색광고 API | [searchad.naver.com](https://searchad.naver.com) 로그인 → 상단 **도구** → **API 사용 관리** → 발급 | API 키 · 비밀키 · CUSTOMER_ID (3개) |
-| 2 | 네이버 개발자 키 | [developers.naver.com](https://developers.naver.com) → **Application → 애플리케이션 등록** → 사용 API에서 **검색** 선택 | Client ID · Client Secret (2개) |
+| 2 | (나중에) 네이버 검색 API | 2026-07-31부터 개발자센터에서 새로 발급 불가 → 네이버 클라우드 **NAVER API HUB**로 이전됨. 없어도 광고 소재 제안은 동작하고, 순위 확인·블로그 참고만 쉼 | API HUB 키 2개 |
 | 3 | (선택) 유튜브 키 — 무료 | [console.cloud.google.com](https://console.cloud.google.com) → 프로젝트 생성 → **YouTube Data API v3** 사용 → 사용자 인증 정보 → API 키 | API 키 (1개) |
 | 4 | (선택) Claude 키 — **유료** | [console.anthropic.com](https://console.anthropic.com) → API Keys | API 키 (1개) |
 
-> 3, 4번은 없어도 됩니다. 4번이 없으면 **무료 기본 문구**로 제안합니다.
+> 2, 3, 4번은 없어도 됩니다. 4번이 없으면 **무료 기본 문구**로 제안합니다.
 > 4번을 넣으면 인기 콘텐츠를 분석한 더 좋은 문구가 나오고, **사용한 만큼 소액이 청구됩니다**
 > (제안이 필요할 때만 호출. 정확한 금액은 사용량에 따라 다르니 Anthropic 콘솔에서 월 한도를 걸어두세요).
 
@@ -30,8 +30,8 @@
 | `NAVER_AD_API_KEY` | ①-1 API 키 |
 | `NAVER_AD_SECRET_KEY` | ①-1 비밀키 |
 | `NAVER_AD_CUSTOMER_ID` | ①-1 CUSTOMER_ID (숫자) |
-| `NAVER_OPENAPI_CLIENT_ID` | ①-2 Client ID |
-| `NAVER_OPENAPI_CLIENT_SECRET` | ①-2 Client Secret |
+| `NAVER_APIHUB_KEY_ID` | ①-2 (나중에) |
+| `NAVER_APIHUB_KEY` | ①-2 (나중에) |
 | `YOUTUBE_API_KEY` | ①-3 (선택) |
 | `ANTHROPIC_API_KEY` | ①-4 (선택) |
 

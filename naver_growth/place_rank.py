@@ -44,14 +44,9 @@ def _clean(s: str) -> str:
 
 class OfficialLocalSearch:
     name = "official"
-    URL = "https://openapi.naver.com/v1/search/local.json"
 
-    def __init__(self, client_id: str | None, client_secret: str | None,
-                 match_name: str, match_address: str = ""):
-        if not (client_id and client_secret):
-            raise RuntimeError("NAVER_OPENAPI_CLIENT_ID / NAVER_OPENAPI_CLIENT_SECRET 가 필요합니다 "
-                               "(developers.naver.com 에서 '검색' API 애플리케이션 등록).")
-        self.headers = {"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret}
+    def __init__(self, url: str, headers: dict[str, str], match_name: str, match_address: str = ""):
+        self.URL, self.headers = url, headers
         self.match_name = _clean(match_name)
         self.match_address = _clean(match_address)
 
@@ -142,10 +137,10 @@ def build_provider(cfg) -> RankProvider:
             delay_range=tuple(b.get("delay_sec", [4, 9])),
             ad_marker=b.get("ad_marker", "광고"),
         )
-    return OfficialLocalSearch(
-        cfg.secrets.get("NAVER_OPENAPI_CLIENT_ID"), cfg.secrets.get("NAVER_OPENAPI_CLIENT_SECRET"),
-        match_name=cfg.get("business.name", ""), match_address=cfg.get("business.match_address", ""),
-    )
+    from .naver_search import endpoint
+    url, headers, _ = endpoint(cfg, "local")
+    return OfficialLocalSearch(url, headers, match_name=cfg.get("business.name", ""),
+                               match_address=cfg.get("business.match_address", ""))
 
 
 def track_all(cfg, db, provider: RankProvider | None = None) -> list[RankResult]:

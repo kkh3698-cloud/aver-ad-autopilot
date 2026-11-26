@@ -23,7 +23,11 @@ def cmd_discover(cfg, db, args):
 
 def cmd_track(cfg, db, args):
     from . import notify
+    from .naver_search import available
     from .place_rank import rank_alerts, track_all
+    if not cfg.demo and cfg.get("place_tracking.provider", "official") == "official" and not available(cfg):
+        print("[rank] 네이버 검색 API 키 없음 — 순위 확인 건너뜀")
+        return
     for r in track_all(cfg, db):
         print(f"[rank] {r.keyword}: {r.rank or '순위권 밖'} (상위 {r.scanned}개 확인, {r.provider})")
     alerts = rank_alerts(db, cfg.get("place_tracking.keywords", []) or [], cfg.get("place_tracking.alert_drop", 3))
@@ -113,8 +117,9 @@ def setup_problems(cfg) -> list[str]:
     s, out = cfg.secrets, []
     if not (s.get("NAVER_AD_API_KEY") and s.get("NAVER_AD_SECRET_KEY") and s.get("NAVER_AD_CUSTOMER_ID")):
         out.append("네이버 검색광고 API 키 3개(NAVER_AD_API_KEY / NAVER_AD_SECRET_KEY / NAVER_AD_CUSTOMER_ID)가 없습니다")
-    if not (s.get("NAVER_OPENAPI_CLIENT_ID") and s.get("NAVER_OPENAPI_CLIENT_SECRET")):
-        out.append("네이버 개발자센터 키(NAVER_OPENAPI_CLIENT_ID / SECRET)가 없어 순위 확인·블로그 수집을 못 합니다")
+    from .naver_search import available
+    if not available(cfg):
+        out.append("(나중에) 네이버 검색 API 키가 없어 플레이스 순위 확인·블로그 참고는 쉬는 중입니다 — 광고 소재 제안은 정상 동작")
     if not s.get("ANTHROPIC_API_KEY"):
         out.append("(선택) ANTHROPIC_API_KEY 가 없어 무료 기본 문구만 제안합니다")
     if not s.get("YOUTUBE_API_KEY") and (cfg.get("inspiration.sources.youtube") or {}).get("enabled"):

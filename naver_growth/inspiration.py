@@ -94,13 +94,8 @@ class YouTubeSource:
 
 class NaverBlogSource:
     name = "naver_blog"
-    URL = "https://openapi.naver.com/v1/search/blog.json"
-
-    def __init__(self, client_id: str | None, client_secret: str | None, per_query: int = 30):
-        if not (client_id and client_secret):
-            raise RuntimeError("NAVER_OPENAPI_CLIENT_ID / SECRET 필요 (순위 추적과 같은 키)")
-        self.headers = {"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret}
-        self.per_query = per_query
+    def __init__(self, url: str, headers: dict[str, str], per_query: int = 30):
+        self.URL, self.headers, self.per_query = url, headers, per_query
 
     def collect(self, queries: list[str]) -> list[dict]:
         found: dict[str, dict] = {}
@@ -168,10 +163,10 @@ def build_sources(cfg) -> list:
         y = s["youtube"]
         out.append(YouTubeSource(cfg.secrets.get("YOUTUBE_API_KEY"), y.get("per_query", 25),
                                  y.get("days", 60), y.get("shorts_only", False)))
-    if (s.get("naver_blog") or {}).get("enabled", True):
-        out.append(NaverBlogSource(cfg.secrets.get("NAVER_OPENAPI_CLIENT_ID"),
-                                   cfg.secrets.get("NAVER_OPENAPI_CLIENT_SECRET"),
-                                   (s.get("naver_blog") or {}).get("per_query", 30)))
+    from .naver_search import available, endpoint
+    if (s.get("naver_blog") or {}).get("enabled", True) and available(cfg):  # 키 없으면 조용히 건너뜀
+        url, headers, _ = endpoint(cfg, "blog")
+        out.append(NaverBlogSource(url, headers, (s.get("naver_blog") or {}).get("per_query", 30)))
     if (s.get("manual") or {}).get("enabled", True):
         out.append(ManualSource(cfg.base_dir / (s.get("manual") or {}).get("path", "inspiration")))
     return out

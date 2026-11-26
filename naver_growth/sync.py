@@ -24,7 +24,7 @@ def managed_adgroups(cfg) -> list[dict]:
     return [g for g in v if isinstance(g, dict) and g.get("id")]
 
 
-EXCLUDED_CAMPAIGN_TYPES = {"PLACE", "SHOPPING", "BRAND_SEARCH", "CATALOG"}  # 텍스트 소재 구조가 다른 유형
+EXCLUDED_CAMPAIGN_TYPES = {"PLACE", "SHOPPING", "BRAND_SEARCH", "CATALOG", "POWER_CONTENTS"}  # 문구 소재를 못 넣는 유형
 
 
 def resolve_adgroups(cfg, db, client=None) -> list[dict]:

@@ -226,3 +226,22 @@ def test_gym_config_rules():
         assert copygen.validate(v(*bad, "", ""), 15, 45, banned, set()) is not None, bad
     for t in c["copygen"]["templates"]:
         assert copygen.validate(v(t["headline"], t["description"], "", ""), 15, 45, banned, set()) is None
+
+
+def test_rsa_label_and_power_content_excluded(env):
+    from naver_growth.creative import drop_unmanaged
+    from naver_growth.naver_ads import ad_label
+    rsa = {"type": "RSA_AD", "ad": {"headlines": [{"text": "하양 PT"}, {"text": "엘핏"}],
+                                    "descriptions": [{"text": "1:1 PT 전문"}]}}
+    h, d = ad_label(rsa)
+    assert h.startswith("[반응형] 하양 PT") and "외 1개" in h and d == "1:1 PT 전문"
+    assert ad_label({"type": "TEXT_45", "ad": {"headline": "a", "description": "b"}}) == ("a", "b")
+
+    cfg, db = env
+    client, ids = _prepare(cfg, db)
+    # 파워컨텐츠 광고그룹(콘텐츠 소재만 있음)에 남아 있던 제안 → 자동 제외
+    db.upsert_entity("nad-c1", "ad", "grp-pc", "글|본문", "active", meta={"type": "CONTENTS_AD_INFORMATION"})
+    pid = db.add_proposal(adgroup_id="grp-pc", adgroup_name="파워컨텐츠", headline="x", description="y")
+    drop_unmanaged(cfg, db)
+    assert db.proposal(pid)["status"] == "expired"
+    assert all(db.proposal(i)["status"] == "pending" for i in ids)  # 정상 그룹 제안은 그대로

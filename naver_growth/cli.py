@@ -160,6 +160,8 @@ def cmd_run(cfg, db, args):
         lines += step("교체 진행", lambda: advance(cfg, db, client)) or []
         lines += step("승인분 반영", lambda: apply_approved(cfg, db, client)) or []
     lines += step("만료 처리", lambda: expire(cfg, db)) or []
+    from .creative import drop_unmanaged
+    lines += step("관리 대상 정리", lambda: drop_unmanaged(cfg, db)) or []
     step("인기 콘텐츠 수집", lambda: cmd_inspire(cfg, db, args))
     ids, notes = (step("소재 제안", lambda: cmd_propose(cfg, db, args)) if client else None) or ([], [])
     if cfg.get("ads.bidding.enabled", False) and client:

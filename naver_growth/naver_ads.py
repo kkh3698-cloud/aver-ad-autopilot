@@ -147,6 +147,41 @@ def ad_status(ad: dict) -> str:
     return "active"
 
 
+TEXT_AD_TYPES = {"TEXT_45", "RSA_AD"}  # 문구 소재 (파워링크 텍스트 / 반응형). 파워컨텐츠(CONTENTS_*) 등은 제외
+
+
+def _texts(obj, key: str) -> list[str]:
+    """중첩된 응답에서 key(headline/description)가 이름에 들어간 필드의 문자열을 모은다.
+    반응형 소재(RSA_AD)는 제목·설명이 여러 개라 구조가 텍스트 소재와 다르다."""
+    out: list[str] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if key in k.lower():
+                if isinstance(v, str):
+                    out.append(v)
+                elif isinstance(v, list):
+                    for it in v:
+                        if isinstance(it, str):
+                            out.append(it)
+                        elif isinstance(it, dict):
+                            t = it.get("text") or it.get(key) or next((x for x in it.values() if isinstance(x, str)), "")
+                            if t:
+                                out.append(t)
+            elif isinstance(v, (dict, list)):
+                out += _texts(v, key)
+    elif isinstance(obj, list):
+        for it in obj:
+            out += _texts(it, key)
+    return out
+
+
 def ad_label(ad: dict) -> tuple[str, str]:
     body = ad.get("ad") or {}
-    return body.get("headline", ""), body.get("description", "")
+    h, d = body.get("headline", ""), body.get("description", "")
+    if not h and not d:
+        hs, ds = _texts(body, "headline"), _texts(body, "description")
+        h = (hs[0] if hs else "") + (f" 외 {len(hs) - 1}개" if len(hs) > 1 else "")
+        d = ds[0] if ds else ""
+        if ad.get("type") == "RSA_AD":
+            h = "[반응형] " + (h or "제목 여러 개")
+    return h, d

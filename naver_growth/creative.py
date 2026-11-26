@@ -5,6 +5,7 @@ import json
 from datetime import date, datetime, timedelta
 
 from . import copygen
+from .naver_ads import TEXT_AD_TYPES
 from .stats import choose_objective, prob_best
 from .sync import managed_adgroups
 
@@ -74,6 +75,10 @@ def propose(cfg, db, today: date | None = None) -> tuple[list[int], list[str]]:
     for g in managed_adgroups(cfg):
         gid, gname = g["id"], g.get("name", g["id"])
         a = analyze_group(cfg, db, gid, today)
+        types = {(json.loads(x["meta"] or "{}") or {}).get("type") for x in a["ads"]}
+        if a["ads"] and not types & TEXT_AD_TYPES:
+            notes.append(f"[{gname}] 문구 소재가 아닌 광고그룹({', '.join(t for t in types if t)})이라 건너뜀")
+            continue
         open_props = db.proposals(OPEN, gid)
         targeted = {p["replaces_ad_id"] for p in open_props if p["replaces_ad_id"]}
         free_losers = [r for r in a["losers"] if r.entity_id not in targeted]
@@ -116,3 +121,18 @@ def propose(cfg, db, today: date | None = None) -> tuple[list[int], list[str]]:
             )
             new_ids.append(pid)
     return new_ids, notes
+
+
+def drop_unmanaged(cfg, db) -> list[str]:
+    """관리 대상에서 빠진 광고그룹(예: 파워컨텐츠)의 승인 대기 제안을 정리."""
+    managed = {g["id"] for g in managed_adgroups(cfg)}
+    out = []
+    for p in db.proposals(["pending", "approved"]):
+        ads = db.entities("ad", p["adgroup_id"])
+        types = {(json.loads(x["meta"] or "{}") or {}).get("type") for x in ads}
+        non_text = bool(ads) and not types & TEXT_AD_TYPES
+        if p["adgroup_id"] not in managed or non_text:
+            if db.transition(p["id"], p["status"], status="expired",
+                             note="문구 소재를 넣을 수 없는 광고그룹(파워컨텐츠 등)이라 자동 제외"):
+                out.append(f"#{p['id']} 자동 제외 ({p['adgroup_name']})")
+    return out

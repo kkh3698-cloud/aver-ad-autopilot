@@ -125,12 +125,12 @@ class FakeAdsClient:
         self._save()
         return ad
 
-    def create_text_ad(self, gid, headline, description, pc_url, mobile_url) -> dict:
+    def create_text_ad(self, gid, headline, description, pc, mobile) -> dict:
         self.state["seq"] += 1
         aid = f"nad-new-{self.state['seq']}"
         self.state["ads"][aid] = {"nccAdId": aid, "nccAdgroupId": gid, "type": "TEXT_45", "userLock": False,
                                   "inspectStatus": "PENDING", "regTm": datetime.now().isoformat(timespec="seconds"),
-                                  "ad": {"headline": headline, "description": description},
+                                  "ad": {"headline": headline, "description": description, "pc": pc, "mobile": mobile},
                                   "_ctr": 0.02 + 0.035 * _h(headline, description),
                                   "_created": date.today().isoformat()}
         self._save()

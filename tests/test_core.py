@@ -256,3 +256,26 @@ def test_inspiration_relevance_filter():
     assert is_relevant({"title": "PT 상담 갔는데 사장이 나를 거절함", "snippet": ""}, m, x)
     assert not is_relevant({"title": "현대자동차 면접 전략 PT면접", "snippet": ""}, m, x)
     assert not is_relevant({"title": "SK하이닉스 하프데이 면접 후기", "snippet": ""}, m, x)
+
+
+def test_practice_approval_not_applied_after_going_live(env):
+    cfg, db = env
+    client, ids = _prepare(cfg, db, live=False)
+    approvals.decide(cfg, db, ids[0], True, "t")
+    approvals.apply_approved(cfg, db, client)              # 연습 모드 승인
+    assert db.proposal(ids[0])["status"] == "approved"
+    n_ads = len(build_client(cfg).state["ads"])
+    cfg.raw["ads"]["dry_run"] = False                     # 실제 모드로 전환
+    approvals.apply_approved(cfg, db, client)
+    assert db.proposal(ids[0])["status"] == "expired"     # 예전 연습 승인분은 만들지 않음
+    assert len(build_client(cfg).state["ads"]) == n_ads
+
+
+def test_new_ad_copies_existing_landing_block(env):
+    cfg, db = env
+    client, ids = _prepare(cfg, db, live=True)
+    approvals.decide(cfg, db, ids[0], True, "t")
+    approvals.apply_approved(cfg, db, client)
+    new = build_client(cfg).state["ads"][db.proposal(ids[0])["new_ad_id"]]
+    assert new["ad"]["pc"] == {"final": "https://example.com"}
+    assert new["ad"]["mobile"] == {"final": "https://m.example.com"}

@@ -113,7 +113,7 @@ class NaverAdsClient:
         return self.request("PUT", f"/ncc/ads/{ad['nccAdId']}", params={"fields": "userLock"}, body=body)
 
     def create_text_ad(self, adgroup_id: str, headline: str, description: str,
-                       pc_url: str, mobile_url: str) -> dict:
+                       pc: dict | str, mobile: dict | str) -> dict:
         # TEXT_45 = 파워링크 기본 텍스트 소재. 생성 직후 네이버 검수(inspectStatus) 대기 상태가 된다.
         body = {
             "type": "TEXT_45",
@@ -121,8 +121,8 @@ class NaverAdsClient:
             "ad": {
                 "headline": headline,
                 "description": description,
-                "pc": {"final": pc_url},
-                "mobile": {"final": mobile_url},
+                "pc": pc if isinstance(pc, dict) else {"final": pc},
+                "mobile": mobile if isinstance(mobile, dict) else {"final": mobile},
             },
         }
         return self.request("POST", "/ncc/ads", body=body)

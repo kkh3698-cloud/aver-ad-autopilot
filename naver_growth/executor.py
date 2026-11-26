@@ -52,17 +52,21 @@ def create_ad(cfg, client, db, adgroup_id: str, headline: str, description: str,
         db.log_action(ref, "create_ad", None, payload, hypothesis, "dry_run", "dry_run=true — 실제 생성 안 함")
         return ""
     ads = client.list_ads(adgroup_id)
-    # 연결 주소: 같은 광고그룹 기존 소재의 주소를 그대로 (네이버는 등록된 비즈채널 주소만 허용)
-    pc, mobile = existing_landing(ads)
-    pc = cfg.get("business.landing_url") or pc
-    mobile = cfg.get("business.mobile_landing_url") or mobile or pc
-    if not pc:
-        raise Blocked("연결 주소를 알 수 없음 — 이 광고그룹에 기존 소재가 없고 config 의 business.landing_url 도 비어 있음")
+    # 연결 주소: 같은 광고그룹 기존 텍스트 소재의 설정을 그대로 (네이버는 등록된 비즈채널 주소만 허용)
+    pc_block, mobile_block = existing_landing_blocks(ads)
+    if cfg.get("business.landing_url"):
+        pc_block = {"final": cfg.get("business.landing_url")}
+        mobile_block = {"final": cfg.get("business.mobile_landing_url") or cfg.get("business.landing_url")}
+    if not pc_block:
+        pc, mobile = existing_landing(ads)
+        pc_block, mobile_block = ({"final": pc}, {"final": mobile}) if pc else (None, None)
+    if not pc_block:
+        raise Blocked("연결 주소를 알 수 없음 — 이 광고그룹에 기존 텍스트 소재가 없고 config 의 business.landing_url 도 비어 있음")
     live = [x for x in ads if not x.get("userLock") and x["nccAdId"] not in (retiring or set())]
     cap = cfg.get("ads.creative.max_active_ads", 4) + (1 if replacing else 0)
     if len(live) >= cap:
         raise NoRoom(f"광고그룹 소재가 {len(live)}개로 상한({cap}) — 교체가 끝나 자리가 나면 생성")
-    res = client.create_text_ad(adgroup_id, headline, description, pc, mobile)
+    res = client.create_text_ad(adgroup_id, headline, description, pc_block, mobile_block)
     new_id = res.get("nccAdId", "")
     db.add_variant(new_id, adgroup_id, headline, description, hypothesis, source)
     db.upsert_entity(new_id, "ad", adgroup_id, f"{headline}|{description}", "pending")
@@ -77,6 +81,15 @@ def existing_landing(ads: list[dict]) -> tuple[str, str]:
         if pc:
             return pc, (body.get("mobile") or {}).get("final", "") or pc
     return "", ""
+
+
+def existing_landing_blocks(ads: list[dict]) -> tuple[dict | None, dict | None]:
+    """같은 그룹 텍스트 소재의 pc/mobile 설정을 통째로 복사 (네이버 형식 그대로 재사용)."""
+    for x in ads:
+        if x.get("type") == "TEXT_45" and (x.get("ad") or {}).get("pc"):
+            body = x["ad"]
+            return dict(body["pc"]), dict(body.get("mobile") or body["pc"])
+    return None, None
 
 
 def pause_ad(cfg, client, db, adgroup_id: str, ad_id: str, label: str, ref: str) -> str:

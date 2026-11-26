@@ -108,6 +108,12 @@ def apply_approved(cfg, db, client) -> list[str]:
     per_run = cfg.get("ads.guardrails.max_changes_per_run", 10)
     done = 0
     for p in sorted(db.proposals(["approved"]), key=lambda r: r["id"]):
+        if not cfg.dry_run and (p["note"] or "").startswith("dry_run"):
+            # 연습 모드에서 눌러본 승인은 실제로 반영하지 않는다 (실제 모드 전환 시 예전 문구가 갑자기 올라가는 사고 방지)
+            db.transition(p["id"], "approved", status="expired",
+                          note="연습 모드에서 승인된 건이라 실제로는 만들지 않았습니다")
+            out.append(f"#{p['id']} 연습 모드 승인분 — 실제 반영 안 함")
+            continue
         # 실행 직전 재검증 (DB 를 손으로 고쳤거나 설정이 바뀐 경우 대비)
         refs = [f"{r['title']} {r['snippet']}" for r in refs_all
                 if r["id"] in json.loads(p["inspiration_ids"] or "[]")]

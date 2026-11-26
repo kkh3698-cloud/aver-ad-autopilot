@@ -30,7 +30,7 @@ place_tracking:
     ad_marker: "광고"
 
 ads:
-  dry_run: true                    # true: 승인해도 실제 생성/중지 안 하고 로그만. 확인 후 false
+  dry_run: false                   # 실제 모드: 승인한 소재만 실제로 생성·교체 (입찰은 그대로). 연습 모드로 되돌리려면 true
   managed_adgroups: auto           # auto: 계정에서 켜져 있는 파워링크 광고그룹 전부 (플레이스·쇼핑 광고 제외)
   # 특정 그룹만 관리하려면:
   # managed_adgroups:

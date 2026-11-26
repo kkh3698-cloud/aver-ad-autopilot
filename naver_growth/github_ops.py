@@ -103,8 +103,8 @@ def issue_body(cfg, db, p) -> str:
     ref_md = "\n".join(f"- [{r['title'][:60]}]({r['url']}) — {r['source']}, {r['metric_label']}" for r in refs[:4])
     kind = "교체" if p["replaces_ad_id"] else "추가"
     lines = [
-        f"@{owner} 새 광고 소재 제안입니다. **이 이슈에 👍 를 누르면 승인, 👎 를 누르면 거절**입니다.",
-        "(댓글로 `승인` / `거절` 이라고 써도 되고, 이슈를 닫으면 거절로 처리합니다.)",
+        f"@{owner} 새 광고 소재 제안입니다. **아래 댓글창에 `승인` 또는 `거절` 이라고 써주세요.** (1~3분 안에 반영)",
+        "<sub>👍/👎 반응도 인정하지만 반영이 최대 1시간 늦습니다. 이슈를 닫으면 거절로 처리합니다.</sub>",
         "",
         f"### 광고그룹: {p['adgroup_name']} · {kind}",
         "",

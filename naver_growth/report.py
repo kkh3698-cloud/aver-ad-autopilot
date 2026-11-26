@@ -310,7 +310,7 @@ def build_markdown(cfg, db, today: date | None = None) -> str:
             n = db.kv_get(f"gh_issue:{p['id']}")
             link = f"#{n}" if n else f"제안 {p['id']}"
             out.append(f"- {link} **{p['headline']}** / {p['description']}")
-        out.append("\n각 이슈를 열어 👍(승인) 또는 👎(거절)을 누르세요.")
+        out.append("\n각 이슈를 열어 댓글로 `승인` 또는 `거절` 이라고 써주세요.")
     else:
         out.append("- 없음")
 

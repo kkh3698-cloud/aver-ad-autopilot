@@ -47,25 +47,36 @@ def create_ad(cfg, client, db, adgroup_id: str, headline: str, description: str,
     """새 소재 생성. replacing=True 면 교체용이라 상한 +1 까지 허용(검수 통과 후 패자를 끔).
     retiring: 이미 교체 소재가 만들어져 곧 꺼질 소재 ID — 상한 계산에서 제외."""
     check_guards(cfg, db)
-    landing = cfg.get("business.landing_url", "")
-    if not landing:
-        raise Blocked("business.landing_url 미설정")
     payload = {"headline": headline, "description": description}
     if cfg.dry_run:
         db.log_action(ref, "create_ad", None, payload, hypothesis, "dry_run", "dry_run=true — 실제 생성 안 함")
         return ""
-    live = [x for x in client.list_ads(adgroup_id)
-            if not x.get("userLock") and x["nccAdId"] not in (retiring or set())]
+    ads = client.list_ads(adgroup_id)
+    # 연결 주소: 같은 광고그룹 기존 소재의 주소를 그대로 (네이버는 등록된 비즈채널 주소만 허용)
+    pc, mobile = existing_landing(ads)
+    pc = cfg.get("business.landing_url") or pc
+    mobile = cfg.get("business.mobile_landing_url") or mobile or pc
+    if not pc:
+        raise Blocked("연결 주소를 알 수 없음 — 이 광고그룹에 기존 소재가 없고 config 의 business.landing_url 도 비어 있음")
+    live = [x for x in ads if not x.get("userLock") and x["nccAdId"] not in (retiring or set())]
     cap = cfg.get("ads.creative.max_active_ads", 4) + (1 if replacing else 0)
     if len(live) >= cap:
         raise NoRoom(f"광고그룹 소재가 {len(live)}개로 상한({cap}) — 교체가 끝나 자리가 나면 생성")
-    res = client.create_text_ad(adgroup_id, headline, description, landing,
-                                cfg.get("business.mobile_landing_url") or landing)
+    res = client.create_text_ad(adgroup_id, headline, description, pc, mobile)
     new_id = res.get("nccAdId", "")
     db.add_variant(new_id, adgroup_id, headline, description, hypothesis, source)
     db.upsert_entity(new_id, "ad", adgroup_id, f"{headline}|{description}", "pending")
     db.log_action(ref, "create_ad", new_id, payload, hypothesis, "applied", f"생성됨 {new_id} (검수 대기)")
     return new_id
+
+
+def existing_landing(ads: list[dict]) -> tuple[str, str]:
+    for x in ads:
+        body = x.get("ad") or {}
+        pc = (body.get("pc") or {}).get("final", "")
+        if pc:
+            return pc, (body.get("mobile") or {}).get("final", "") or pc
+    return "", ""
 
 
 def pause_ad(cfg, client, db, adgroup_id: str, ad_id: str, label: str, ref: str) -> str:

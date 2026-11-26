@@ -124,8 +124,10 @@ def setup_problems(cfg) -> list[str]:
         out.append("(선택) ANTHROPIC_API_KEY 가 없어 무료 기본 문구만 제안합니다")
     if not s.get("YOUTUBE_API_KEY") and (cfg.get("inspiration.sources.youtube") or {}).get("enabled"):
         out.append("(선택) YOUTUBE_API_KEY 가 없어 유튜브 인기 영상은 참고하지 않습니다")
-    if "OO헤어" in str(cfg.get("business.name", "")) or "1234567890" in str(cfg.get("business.landing_url", "")):
+    if "OO헤어" in str(cfg.get("business.name", "")):
         out.append("config.yaml 의 가게 정보(business)가 아직 예시값입니다")
+    if len((cfg.get("copygen.brand_notes") or "").strip().splitlines()) <= 3:
+        out.append("(추천) 광고에 쓸 가게 특징이 적습니다 — 플레이스 설명란 내용을 config.yaml 의 brand_notes 에 추가하면 문구가 좋아집니다")
     return out
 
 

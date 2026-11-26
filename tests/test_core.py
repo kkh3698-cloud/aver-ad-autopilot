@@ -206,3 +206,23 @@ def test_telegram_only_authorized_user_can_approve(env, monkeypatch):
     assert db.proposal(ids[1])["status"] in ("applied", "approved")
     assert db.proposal(ids[1])["decided_by"] == "telegram:owner"
     assert db.kv_get("tg_offset") == "2"
+
+
+def test_landing_url_reused_from_existing_ads():
+    from naver_growth.executor import existing_landing
+    ads = [{"ad": {"headline": "a"}}, {"ad": {"pc": {"final": "https://site.kr"}, "mobile": {"final": "https://m.site.kr"}}}]
+    assert existing_landing(ads) == ("https://site.kr", "https://m.site.kr")
+    assert existing_landing([]) == ("", "")
+
+
+def test_gym_config_rules():
+    """실제 config.yaml(엘핏 하양점)의 금지어가 의료·과장 표현을 막는지."""
+    import yaml
+    c = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    banned = c["copygen"]["banned_words"] + c["inspiration"]["competitor_names"]
+    v = copygen.Variant
+    for bad in [("하양 PT 엘핏", "허리 통증 고쳐드립니다"), ("하양 PT", "한 달 10kg 감량"),
+                ("하양 피티", "알로하 근처 헬스장"), ("체형 교정 PT", "하양읍")]:
+        assert copygen.validate(v(*bad, "", ""), 15, 45, banned, set()) is not None, bad
+    for t in c["copygen"]["templates"]:
+        assert copygen.validate(v(t["headline"], t["description"], "", ""), 15, 45, banned, set()) is None

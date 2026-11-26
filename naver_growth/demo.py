@@ -42,7 +42,8 @@ def _initial_state() -> dict:
             aid = f"nad-{g}-{i}"
             st["ads"][aid] = {"nccAdId": aid, "nccAdgroupId": g, "type": "TEXT_45", "userLock": False,
                               "inspectStatus": "APPROVED", "regTm": reg,
-                              "ad": {"headline": h, "description": d}, "_ctr": ctr}
+                              "ad": {"headline": h, "description": d, "pc": {"final": "https://example.com"},
+                                     "mobile": {"final": "https://m.example.com"}}, "_ctr": ctr}
     for g, rows in kws.items():
         for i, (k, bid, cvr) in enumerate(rows):
             kid = f"nkw-{g}-{i}"

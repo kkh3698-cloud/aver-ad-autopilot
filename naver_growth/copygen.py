@@ -134,6 +134,7 @@ def _claude_variants(cfg, adgroup_name: str, winners: list[dict], losers: list[d
         f'{r["title"]} — {r["snippet"]}</item>' for r in refs)
     task = {
         "business": cfg.get("business.name"),
+        "industry": cfg.get("business.industry", ""),
         "brand_notes": cfg.get("copygen.brand_notes", ""),
         "adgroup": adgroup_name,
         "current_winners": winners,
@@ -146,7 +147,8 @@ def _claude_variants(cfg, adgroup_name: str, winners: list[dict], losers: list[d
         betas=["server-side-fallback-2026-07-01"],
         fallbacks="default",  # 안전 분류기 거절 시 서버가 다른 모델로 자동 재시도
         output_config={"effort": "medium", "format": {"type": "json_schema", "schema": SCHEMA}},
-        system=SYSTEM.format(hmax=hmax, dmax=dmax, banned=", ".join(banned)),
+        system=SYSTEM.format(hmax=hmax, dmax=dmax, banned=", ".join(banned))
+        + (f"\n\n업종 특화 규칙:\n{cfg.get('copygen.extra_rules')}" if cfg.get("copygen.extra_rules") else ""),
         messages=[{"role": "user", "content":
                    f"<reference_content>\n{ref_block}\n</reference_content>\n\n"
                    f"<task>{json.dumps(task, ensure_ascii=False)}</task>"}],

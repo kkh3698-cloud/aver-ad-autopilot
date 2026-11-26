@@ -74,7 +74,9 @@ def sync_ads(cfg, db, client, today: date | None = None) -> dict[str, int]:
         for ad in client.list_ads(gid):
             h, d = ad_label(ad)
             db.upsert_entity(ad["nccAdId"], "ad", gid, f"{h}|{d}", ad_status(ad),
-                             meta={"type": ad.get("type"), "regTm": ad.get("regTm")})
+                             meta={"type": ad.get("type"), "regTm": ad.get("regTm"),
+                                   # 반응형 소재 구조 파악용 (필드 이름만, 값은 저장 안 함)
+                                   "ad_keys": sorted((ad.get("ad") or {}).keys())})
             store_stats(ad["nccAdId"], "ad", gid)
             counts["ads"] += 1
         for kw in client.list_keywords(gid):

@@ -158,3 +158,36 @@ def test_dashboard_markdown_and_issue(gh_env):
     github_ops.update_dashboard(cfg, db, md + "x")
     assert len([i for i in fake.issues.values() if "대시보드" in i["labels"]]) == 1
     assert fake.issues[int(n)]["body"].endswith("x")
+
+
+def test_hourly_check_finishes_swap_without_weekly_run(gh_env, monkeypatch):
+    """정기 실행이 주 1회여도, 1시간마다 도는 승인 처리에서 검수 통과 → 기존 소재 중지까지 끝나는지."""
+    import argparse
+    from naver_growth import cli
+    cfg, db, client, ids, fake = gh_env
+    monkeypatch.setenv("GITHUB_TOKEN", "x")
+    cfg.demo = False                                   # github_ops.enabled 가 켜지도록
+    import naver_growth.sync as sync_mod
+    monkeypatch.setattr(sync_mod, "build_client", lambda c: build_client(c))
+    rep = next(i for i in ids if db.proposal(i)["replaces_ad_id"])
+    loser = db.proposal(rep)["replaces_ad_id"]
+    fake.user_comment(_issue(db, rep), "boss", "승인")
+
+    cfg.demo = True; c1 = build_client(cfg); cfg.demo = False
+    monkeypatch.setattr(sync_mod, "build_client", lambda c: c1)
+    cli.cmd_check_approvals(cfg, db, argparse.Namespace())
+    assert db.proposal(rep)["status"] == "applied"
+
+    # 다음날 네이버 검수 통과
+    p = cfg.base_dir / "data" / "demo_state.json"
+    s = json.loads(p.read_text())
+    for a in s["ads"].values():
+        if a.get("_created"):
+            a["_created"] = "2000-01-01"
+    p.write_text(json.dumps(s, ensure_ascii=False))
+    cfg.demo = True; c2 = build_client(cfg); cfg.demo = False
+    monkeypatch.setattr(sync_mod, "build_client", lambda c: c2)
+    cli.cmd_check_approvals(cfg, db, argparse.Namespace())
+    assert db.proposal(rep)["status"] == "live"
+    assert c2.state["ads"][loser]["userLock"] is True
+    assert fake.issues[_issue(db, rep)]["state"] == "closed"

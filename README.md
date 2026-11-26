@@ -6,12 +6,12 @@
 새 소재는 같은 업계에서 반응이 좋은 콘텐츠(유튜브·블로그·직접 넣은 릴스 등)의 소구 패턴을 참고해
 자동으로 만들고, **사람이 승인한 것만** 계정에 반영합니다.
 
-운영 방식(기본): **GitHub Actions(무료)** 가 하루 2번 `run`, 승인은 **GitHub 이슈에 👍/👎**.
+운영 방식(기본): **GitHub Actions(무료)** 가 매주 월요일 `run`, 승인은 **GitHub 이슈에 댓글 승인/거절**.
 서버·상시 켜둔 PC 불필요. 실행 기록(SQLite)은 `autopilot-data` 브랜치에 자동 저장.
 (직접 서버에서 돌리고 싶으면 `deploy/crontab.example`, 텔레그램 승인은 `approvals.channel: telegram`)
 
 ```
- [Actions] 하루 2회 run                                [Actions] 댓글 즉시 / 1시간마다 check-approvals
+ [Actions] 매주 월요일 run                             [Actions] 댓글 즉시 / 1시간마다 check-approvals
    │                                                      │
    ① track    플레이스 순위 측정 → 하락 알림                │
    ② sync     소재·키워드·통계 수집 (읽기 전용)             │

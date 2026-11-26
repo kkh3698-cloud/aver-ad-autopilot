@@ -1,4 +1,5 @@
-# 승인 요청 이슈에 👍/👎 를 누르거나 댓글을 달면 바로(보통 1~3분) 처리합니다.
+# 승인 요청 이슈에 댓글('승인'/'거절')을 달면 바로(보통 1~3분) 처리합니다.
+# 승인된 새 소재가 네이버 검수를 통과했는지도 1시간마다 확인해서, 통과하면 기존 소재를 끕니다.
 # 👍 반응만 누른 경우는 GitHub 가 이벤트를 보내지 않아서, 1시간마다 한 번씩 확인합니다.
 # (바로 반영되길 원하면 👍 대신 '승인' 댓글을 다세요)
 # 무료 한도: 비공개 저장소 월 2,000분 — 이 설정으로 월 약 800~900분 사용 예상
@@ -30,7 +31,7 @@ jobs:
         with: { ref: autopilot-data, path: data }
       - name: 대기 중인 승인 요청이 있을 때만 처리
         id: pending
-        run: python3 -c "import sqlite3,os,sys; p='data/autopilot.db'; n=sqlite3.connect(p).execute(\"select count(*) from proposals where status in ('pending','approved')\").fetchone()[0] if os.path.exists(p) else 0; print('n=%d'%n); open(os.environ['GITHUB_OUTPUT'],'a').write('n=%d\n'%n)"
+        run: python3 -c "import sqlite3,os,sys; p='data/autopilot.db'; n=sqlite3.connect(p).execute(\"select count(*) from proposals where status in ('pending','approved','applied')\").fetchone()[0] if os.path.exists(p) else 0; print('n=%d'%n); open(os.environ['GITHUB_OUTPUT'],'a').write('n=%d\n'%n)"
       - if: steps.pending.outputs.n != '0'
         uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }

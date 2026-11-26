@@ -360,5 +360,5 @@ def build_markdown(cfg, db, today: date | None = None) -> str:
     if done:
         out += ["### 🗂 최근 처리", "| 제안 | 상태 |", "|---|---|"]
         out += [f"| {p['headline']} | {STATUS_KO.get(p['status'], p['status'])} |" for p in done]
-    out += ["", "<sub>이 이슈는 하루 2번 자동으로 갱신됩니다. 닫아도 다음 실행 때 다시 열립니다.</sub>"]
+    out += ["", "<sub>이 이슈는 매주 월요일 아침과 승인 처리 때 갱신됩니다. 닫아도 다음 실행 때 다시 열립니다.</sub>"]
     return "\n".join(out)

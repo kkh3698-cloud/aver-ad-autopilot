@@ -101,6 +101,16 @@ def cmd_check_approvals(cfg, db, args):
     client = build_client(cfg)
     if github_ops.enabled(cfg):
         lines = github_ops.check(cfg, db, client)
+        if db.proposals(["applied"]):
+            # 검수 결과 확인 → 통과했으면 기존 소재 끄기 (정기 실행이 주 1회라 여기서도 처리)
+            from .approvals import advance
+            from .report import build_markdown
+            from .sync import resolve_adgroups, sync_ads
+            resolve_adgroups(cfg, db, client)
+            sync_ads(cfg, db, client)
+            lines += advance(cfg, db, client)
+            lines += github_ops.sync_states(cfg, db)
+            github_ops.update_dashboard(cfg, db, build_markdown(cfg, db))
     elif cfg.get("approvals.channel") == "telegram":
         from .approvals import poll_telegram
         lines = poll_telegram(cfg, db, client)

@@ -45,12 +45,24 @@ def longest_common_run(a: str, b: str) -> int:
     return best
 
 
+# 네이버 소재에 확실히 쓸 수 있는 문자만 허용 (2026-11 실계정에서 '→' 가 400 오류: "Only English and Korean,
+# and some special characters are allowed"). 기존에 승인돼 노출 중인 소재에 쓰인 기호 위주로 보수적으로 잡음.
+ALLOWED_CHARS = re.compile(r"^[가-힣a-zA-Z0-9 .,!?'\"()\-:/%~&+]+$")
+
+
+def bad_chars(text: str) -> str:
+    return "".join(sorted({ch for ch in text if not ALLOWED_CHARS.match(ch)}))
+
+
 def validate(v: Variant, headline_max: int, desc_max: int, banned: list[str],
              existing: set[tuple[str, str]], references: list[str] | None = None,
              max_copied: int = 10) -> str | None:
     """문제 있으면 사유 문자열, 통과하면 None."""
     if not v.headline.strip() or not v.description.strip():
         return "빈 문구"
+    bad = bad_chars(v.headline + v.description)
+    if bad:
+        return f"네이버에서 못 쓰는 기호 '{bad}'"
     if len(v.headline) > headline_max:
         return f"제목 {len(v.headline)}자 > {headline_max}"
     if len(v.description) > desc_max:
@@ -116,6 +128,7 @@ SYSTEM = """당신은 한국 로컬 비즈니스의 네이버 파워링크 광�
 
 반드시 지킬 것:
 - 제목 {hmax}자 이내, 설명 {dmax}자 이내(공백 포함).
+- 한글·영어·숫자와 기호 . , ! ? ' " ( ) - : / % ~ & + 만 쓰세요. 화살표(→), 가운뎃점(·), 이모지, 별표 등은 네이버가 거절합니다.
 - 참고 콘텐츠의 문장을 그대로 옮기지 말고, 업체명·인물명·채널명·경쟁사명을 쓰지 마세요.
 - 근거 없는 최상급/보장 표현 금지: {banned}.
 - brand_notes 에 없는 가격·할인·수상·수치·후기 내용을 지어내지 마세요."""

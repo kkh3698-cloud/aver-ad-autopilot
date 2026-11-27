@@ -130,7 +130,7 @@ copygen:
                  "kg", "킬로", "요요", "기적", "단기간", "효과 보장", "책임"]
   templates:                       # Claude 키가 없을 때 쓰는 무료 기본 문구 (설명란 사실만)
     - { headline: "하양 1:1 PT 무료체험", description: "등록 전 무료 체험 PT. 상담과 움직임 확인 후 맞춤 운동을 안내합니다.", hypothesis: "무료 체험(진입 장벽 낮추기)" }
-    - { headline: "하양 프라이빗 PT 엘핏", description: "1:1 PT 중심 프라이빗 헬스장. 탈의·샤워 공간 분리, 사전 예약제.", hypothesis: "프라이빗 환경" }
+    - { headline: "하양 프라이빗 PT 엘핏", description: "1:1 PT 중심 프라이빗 헬스장. 탈의, 샤워 공간 분리, 사전 예약제.", hypothesis: "프라이빗 환경" }
     - { headline: "PT 3회 99,000원", description: "신규 회원 전용 맛보기. 여러 번 수업해 보고 결정하세요. 하양읍 엘핏.", hypothesis: "가격 투명성" }
     - { headline: "혼자 운동이 막막할 때", description: "운동 목적과 움직임부터 확인하는 1:1 PT, 경산 하양 엘핏.", hypothesis: "고민 공감형" }
     - { headline: "하양 헬스장 엘핏 PT", description: "PT 회원은 추가 요금 없이 개인운동 가능. 운동 영상 피드백 제공.", hypothesis: "수업 외 관리" }

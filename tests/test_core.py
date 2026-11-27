@@ -347,3 +347,13 @@ def test_waiting_approval_retried_on_next_check(env):
     assert db.proposal(ids[0])["status"] == "approved"
     approvals.apply_approved(cfg, db, client)               # 다음 확인
     assert db.proposal(ids[0])["status"] == "applied"
+
+
+def test_naver_rejected_symbols_blocked_before_approval():
+    v = copygen.Variant
+    # 2026-11-27 실계정에서 네이버가 400 으로 거절한 문구
+    assert "기호" in copygen.validate(v("상담→확인→맞춤 PT", "운동경험·생활습관 상담", "", ""), 15, 45, [], set())
+    assert "기호" in copygen.validate(v("하양 PT 💪", "설명", "", ""), 15, 45, [], set())
+    # 실제로 승인·노출 중인 소재 문구는 통과
+    assert copygen.validate(v("헬스 처음이라 막막하면", "상담부터 움직임 확인까지 1:1로, 내 몸에 맞는 운동 방법을 배워요", "", ""),
+                            15, 45, [], set()) is None

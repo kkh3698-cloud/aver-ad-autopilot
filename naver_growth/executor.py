@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from .naver_ads import ad_status
+from .naver_ads import ad_label, ad_status
 from .optimizer import Action, Plan
 
 
@@ -43,7 +43,7 @@ def check_guards(cfg, db) -> None:
 
 def create_ad(cfg, client, db, adgroup_id: str, headline: str, description: str,
               hypothesis: str, source: str, replacing: bool, ref: str,
-              retiring: set[str] | None = None) -> str:
+              retiring: set[str] | None = None, replaces_id: str | None = None) -> str:
     """새 소재 생성. replacing=True 면 교체용이라 상한 +1 까지 허용(검수 통과 후 패자를 끔).
     retiring: 이미 교체 소재가 만들어져 곧 꺼질 소재 ID — 상한 계산에서 제외."""
     check_guards(cfg, db)
@@ -64,9 +64,29 @@ def create_ad(cfg, client, db, adgroup_id: str, headline: str, description: str,
         raise Blocked("연결 주소를 알 수 없음 — 이 광고그룹에 기존 텍스트 소재가 없고 config 의 business.landing_url 도 비어 있음")
     live = [x for x in ads if not x.get("userLock") and x["nccAdId"] not in (retiring or set())]
     cap = cfg.get("ads.creative.max_active_ads", 4) + (1 if replacing else 0)
+    paused_first = None
     if len(live) >= cap:
-        raise NoRoom(f"광고그룹 소재가 {len(live)}개로 상한({cap}) — 교체가 끝나 자리가 나면 생성")
-    res = client.create_text_ad(adgroup_id, headline, description, pc_block, mobile_block)
+        loser = next((x for x in live if x["nccAdId"] == replaces_id), None) if replaces_id else None
+        others_active = [x for x in ads if ad_status(x) == "active" and x["nccAdId"] != replaces_id]
+        if not loser or len(others_active) < cfg.get("ads.creative.min_active_ads", 2):
+            raise NoRoom(f"광고그룹 소재가 {len(live)}개로 상한({cap}) — 교체가 끝나 자리가 나면 생성")
+        # 교체인데 자리가 꽉 찼으면: 승인된 교체 대상(패자)을 먼저 끄고 새 소재를 넣는다 (총 개수 그대로)
+        client.set_ad_lock(loser, True)
+        h, d = ad_label(loser)
+        db.upsert_entity(loser["nccAdId"], "ad", adgroup_id, f"{h}|{d}", "paused")
+        db.log_action(ref, "pause_ad", loser["nccAdId"], {"label": f"{h}|{d}"}, "", "applied",
+                      "소재 자리가 꽉 차서 교체 대상 소재를 먼저 중지")
+        paused_first = loser
+    try:
+        res = client.create_text_ad(adgroup_id, headline, description, pc_block, mobile_block)
+    except Exception:
+        if paused_first:  # 새 소재 등록 실패 → 먼저 끈 소재를 다시 켜서 원상복구
+            client.set_ad_lock(paused_first, False)
+            h, d = ad_label(paused_first)
+            db.upsert_entity(paused_first["nccAdId"], "ad", adgroup_id, f"{h}|{d}", "active")
+            db.log_action(ref, "pause_ad", paused_first["nccAdId"], {}, "", "rolled_back",
+                          "새 소재 등록 실패로 먼저 끈 소재를 다시 켬")
+        raise
     new_id = res.get("nccAdId", "")
     db.add_variant(new_id, adgroup_id, headline, description, hypothesis, source)
     db.upsert_entity(new_id, "ad", adgroup_id, f"{headline}|{description}", "pending")

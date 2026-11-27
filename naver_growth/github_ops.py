@@ -120,7 +120,7 @@ def issue_body(cfg, db, p) -> str:
         lines += ["", "**참고 콘텐츠 (같은 업계, 반응 좋았던 것)**", ref_md]
     if p["replaces_label"]:
         lines += ["", f"**승인 시 꺼질 기존 소재:** {p['replaces_label'].replace('|', ' / ')}",
-                  "(새 소재가 네이버 검수를 통과한 뒤에 꺼집니다. 그 전까지는 계속 노출)"]
+                  "(보통은 새 소재가 네이버 검수를 통과한 뒤에 꺼집니다. 광고그룹 소재 수가 꽉 차 있으면 먼저 끄고 새 소재를 등록하며, 등록에 실패하면 다시 켭니다)"]
     lines += ["", f"**제안 이유:** {p['reason']}", "",
               f"<sub>입찰가는 바꾸지 않습니다 · 응답이 없으면 {cfg.get('approvals.expire_days', 7)}일 뒤 자동 만료</sub>"]
     if cfg.dry_run:
@@ -187,7 +187,7 @@ def check(cfg, db, client) -> list[str]:
         if dec:
             d, who = dec
             out.append(decide(cfg, db, p["id"], d == "approve", f"github:{who}"))
-    if any("승인됨" in x for x in out):
+    if db.proposals(["approved"]):  # 새 승인뿐 아니라, 전에 승인돼 대기 중인 것도 매번 다시 시도
         out += apply_approved(cfg, db, client)
     out += sync_states(cfg, db, gh)
     return out
@@ -195,7 +195,7 @@ def check(cfg, db, client) -> list[str]:
 
 STATUS_MSG = {
     "approved": ("승인됨", "✅ 승인 확인. 다음 실행 때 소재를 만듭니다."),
-    "applied": ("검수중", "✅ 새 소재를 네이버에 등록했습니다. **네이버 검수 중**이며, 통과하면 알려드립니다."),
+    "applied": ("검수중", "✅ 새 소재를 네이버에 등록했습니다. **네이버 검수 중**이며, 통과하면 알려드립니다. {note}"),
     "live": ("교체완료", "🎉 네이버 검수 통과 → 새 소재 노출 시작. {note}"),
     "rejected": ("거절됨", "거절 처리했습니다. 이 문구는 다시 제안하지 않습니다."),
     "expired": ("거절됨", "자동으로 정리했습니다: {note}"),

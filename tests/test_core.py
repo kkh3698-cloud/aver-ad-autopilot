@@ -279,3 +279,71 @@ def test_new_ad_copies_existing_landing_block(env):
     new = build_client(cfg).state["ads"][db.proposal(ids[0])["new_ad_id"]]
     assert new["ad"]["pc"] == {"final": "https://example.com"}
     assert new["ad"]["mobile"] == {"final": "https://m.example.com"}
+
+
+def _fill_group_to(cfg, gid, n):
+    """데모 광고그룹 소재를 n개(활성)로 채움 — 실제 계정(5개 꽉 참) 재현."""
+    p = cfg.base_dir / "data" / "demo_state.json"
+    s = json.loads(p.read_text())
+    live = [a for a in s["ads"].values() if a["nccAdgroupId"] == gid and not a["userLock"]]
+    for i in range(n - len(live)):
+        aid = f"nad-fill-{gid}-{i}"
+        s["ads"][aid] = {"nccAdId": aid, "nccAdgroupId": gid, "type": "RSA_AD", "userLock": False,
+                         "inspectStatus": "APPROVED", "regTm": "2025-01-01T00:00:00",
+                         "ad": {"pc": {"final": "https://example.com"}, "mobile": {"final": "https://m.example.com"}},
+                         "_ctr": 0.03}
+    p.write_text(json.dumps(s, ensure_ascii=False))
+
+
+def test_replacement_in_full_group_pauses_loser_first(env):
+    cfg, db = env
+    client, ids = _prepare(cfg, db, live=True)
+    rep = next(i for i in ids if db.proposal(i)["replaces_ad_id"])
+    gid, loser = db.proposal(rep)["adgroup_id"], db.proposal(rep)["replaces_ad_id"]
+    _fill_group_to(cfg, gid, 5)                     # max_active 4 + 교체 여유 1 = 꽉 참
+    client = build_client(cfg)
+    approvals.decide(cfg, db, rep, True, "t")
+    approvals.apply_approved(cfg, db, client)
+    p = db.proposal(rep)
+    assert p["status"] == "applied" and p["new_ad_id"]          # 대기에 멈추지 않고 생성됨
+    st = build_client(cfg).state["ads"]
+    assert st[loser]["userLock"] is True                        # 교체 대상은 먼저 꺼짐
+    assert len([a for a in st.values() if a["nccAdgroupId"] == gid and not a["userLock"]]) == 5  # 총 개수 그대로
+    assert "먼저 중지" in p["note"]
+
+
+def test_full_group_rollback_when_create_fails(env):
+    cfg, db = env
+    client, ids = _prepare(cfg, db, live=True)
+    rep = next(i for i in ids if db.proposal(i)["replaces_ad_id"])
+    gid, loser = db.proposal(rep)["adgroup_id"], db.proposal(rep)["replaces_ad_id"]
+    _fill_group_to(cfg, gid, 5)
+    client = build_client(cfg)
+
+    def boom(*a, **k):
+        raise RuntimeError("네이버 400")
+    client.create_text_ad = boom
+    approvals.decide(cfg, db, rep, True, "t")
+    approvals.apply_approved(cfg, db, client)
+    assert db.proposal(rep)["status"] == "failed"
+    assert build_client(cfg).state["ads"][loser]["userLock"] is False   # 원상복구
+
+
+def test_waiting_approval_retried_on_next_check(env):
+    """승인 후 '대기'로 멈춘 건이 다음 확인 때 다시 시도되는지 (어제 실제로 멈췄던 상황)."""
+    from naver_growth import executor
+    cfg, db = env
+    client, ids = _prepare(cfg, db, live=True)
+    approvals.decide(cfg, db, ids[0], True, "t")
+    orig = executor.create_ad
+
+    def no_room(*a, **k):
+        raise executor.NoRoom("자리 없음")
+    executor.create_ad = no_room
+    try:
+        approvals.apply_approved(cfg, db, client)
+    finally:
+        executor.create_ad = orig
+    assert db.proposal(ids[0])["status"] == "approved"
+    approvals.apply_approved(cfg, db, client)               # 다음 확인
+    assert db.proposal(ids[0])["status"] == "applied"

@@ -131,7 +131,7 @@ def apply_approved(cfg, db, client) -> list[str]:
         try:
             new_id = executor.create_ad(cfg, client, db, p["adgroup_id"], p["headline"], p["description"],
                                         p["hypothesis"] or "", p["source"] or "", bool(p["replaces_ad_id"]),
-                                        _ref(p["id"]), retiring)
+                                        _ref(p["id"]), retiring, p["replaces_ad_id"])
         except executor.NoRoom as e:
             db.update_proposal(p["id"], note=str(e))
             out.append(f"#{p['id']} 대기 — {e}")
@@ -152,6 +152,11 @@ def apply_approved(cfg, db, client) -> list[str]:
             out.append(f"#{p['id']} dry_run (실제 생성 안 함)")
             continue
         db.transition(p["id"], "approved", status="applied", new_ad_id=new_id, note="네이버 검수 대기")
+        paused_first = p["replaces_ad_id"] and any(
+            r["action_type"] == "pause_ad" and r["status"] == "applied" and r["target_id"] == p["replaces_ad_id"]
+            and r["plan_id"] == _ref(p["id"]) for r in db.recent_actions(20))
+        if paused_first:
+            db.update_proposal(p["id"], note="네이버 검수 대기 (소재 자리가 꽉 차서 기존 소재는 먼저 중지함)")
         done += 1
         out.append(f"#{p['id']} 소재 생성 {new_id} — 네이버 검수 대기")
     return out
@@ -178,7 +183,7 @@ def advance(cfg, db, client) -> list[str]:
                     out.append(f"#{p['id']} 교체 보류 — {e}")
                     continue
                 except executor.StaleError as e:
-                    msg += f" (패자 중지 생략: {e})"
+                    msg += ", 기존 소재는 이미 중지됨" if "이미 중지" in str(e) else f" (기존 소재 중지 생략: {e})"
             db.transition(p["id"], "applied", status="live", note=msg)
             out.append(f"#{p['id']} 교체 완료 — {msg}")
     return out
